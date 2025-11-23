@@ -5,6 +5,18 @@
 #include <print>
 #include <utility>
 
+#include <numeric>
+#include <array>
+#include <cstddef>
+#include <print>
+#include <algorithm>
+#include <functional>
+#include <ranges>
+#include <cmath>
+#include <chrono>
+
+
+
 namespace image {
 
 namespace fs = std::filesystem;
@@ -46,137 +58,140 @@ template <typename T, size_t N>
 class vec {
 
 public:
+
   template <typename... ArgsT>
     requires (std::same_as<ArgsT, T> && ...) && (sizeof...(ArgsT) == N)
-  vec(ArgsT... args) : m_Data{args...} {}
+  vec(ArgsT... args) : m_Array{args...} {}
 
-  vec operator+(const vec& b)
+  vec() : m_Array{} {}
+
+  vec operator+(const vec& b) const { return generic_binary_operator<std::plus<>>(b); }
+  vec operator-(const vec& b) const { return generic_binary_operator<std::minus<>>(b); }
+  vec operator*(const vec& b) const { return generic_binary_operator<std::multiplies<>>(b); }
+  vec operator/(const vec& b) const { return generic_binary_operator<std::divides<>>(b); }
+  
+  vec operator+(T b) const { return generic_binary_operator<std::plus<>>(b); }
+  vec operator-(T b) const { return generic_binary_operator<std::minus<>>(b); }
+  vec operator*(T b) const { return generic_binary_operator<std::multiplies<>>(b); }
+  vec operator/(T b) const { return generic_binary_operator<std::divides<>>(b); }
+
+  vec& operator+=(const vec& b) { return generic_assignment_operator<std::plus<>>(b); }
+  vec& operator-=(const vec& b) { return generic_assignment_operator<std::minus<>>(b); }
+  vec& operator*=(const vec& b) { return generic_assignment_operator<std::multiplies<>>(b); }
+  vec& operator/=(const vec& b) { return generic_assignment_operator<std::divides<>>(b); }
+
+  const auto& GetData() const { return m_Array; }
+  auto& GetData() { return m_Array; }
+
+  auto x() const { return m_Array[0]; }
+  auto y() const { return m_Array[0]; }
+  auto z() const { return m_Array[0]; }
+
+private:
+  template<class Op>
+  vec generic_binary_operator(const vec& b) const
   {
     vec c;
-    for (size_t i = 0; i < m_Data.size(); i++) {}
+    std::ranges::transform(m_Array, b.m_Array, c.m_Array.begin(), Op{});
     return c;
   }
 
-private:
-  std::array<T,N> m_Data;
+  template <class Op>
+  vec& generic_assignment_operator(const vec& b)
+  {
+    std::ranges::transform(m_Array, b.m_Array, m_Array.begin(), Op{});
+    return *this;
+  }
+
+  template <class Op>
+  vec generic_binary_operator(T b) const
+  {
+    vec c;
+    std::ranges::transform(m_Array, std::views::repeat(b), c.m_Array.begin(), Op{});
+    return c;
+  }
+
+  std::array<T,N> m_Array;
 };
 
-template <typename T, size_t N>
-vec<T,N> operator+(const vec<T,N>& a, const vec<T,N>& b)
+template<class T, size_t N>
+vec<T,N> normalize(const vec<T,N>& v) {
+  const auto& data = v.GetData();
+  auto l = std::accumulate(data.begin(), data.end(), 0.0f, [](float acc, float x) { return acc + x*x; } );
+  std::println("sum = {}", l);
+  return v / std::sqrtf(l);
+}
+
+// Two implementation of dot - for -O0 the dot_2 is significantly faster,
+// for -01 the dot_1 was faster,
+// for -02 and -O3 the times are identical
+// (clang version 21.1.5)
+
+template<class T, size_t N>
+T dot_1(const vec<T,N> &a, const vec<T,N> &b)
 {
-  return vec<T,N>{};
+  auto z = std::views::zip(a.GetData(), b.GetData());
+  auto res = std::accumulate(z.begin(), z.end(), 0.0f, [](float acc, const auto& x) { return acc + std::get<0>(x) * std::get<1>(x); });
+  return static_cast<T>(res);
 }
 
-using nvec4 = vec<float,4>;
-
-// Math
-struct vec4 {
-  float x = 0.0f;
-  float y = 0.0f;
-  float z = 0.0f;
-  float w = 0.0f;
-
-  vec4(float a) : x{a}, y{a}, z{a}, w{a} {} // scalar promoted to vec
-  vec4() : vec4(0, 0, 0, 0) {}
-  vec4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
-};
-
-struct vec2 {
-  float x, y;
-
-  vec2(float a) : x{a}, y{a} {} // scalar promoted to vec
-  vec2() : vec2(0, 0) {}
-  vec2(float x, float y) : x{x}, y{y} {}
-
-  vec4 xyyx() { return vec4{x, y, y, x}; }
-  vec2 yx() { return vec2{y, x}; }
-};
-
-vec2 operator+(const vec2 &a, const vec2 &b) {
-  return vec2{a.x + b.x, a.y + b.y};
+template<class T, size_t N>
+T dot_2(const vec<T,N> &a, const vec<T,N> &b)
+{
+  const T* pA = a.GetData().data();
+  const T* pB = b.GetData().data();
+  T sum{};
+  for (size_t i = 0; i < N; i++)
+  {
+    sum += pA[i] * pB[i];
+  }
+  return sum;
 }
 
-vec2 operator*(const vec2 &a, float b) { return vec2{a.x * b, a.y * b}; }
-
-vec2 operator/(const vec2 &a, float b) { return vec2{a.x / b, a.y / b}; }
-
-vec2 operator-(const vec2 &a, const vec2 &b) {
-  return vec2{a.x - b.x, a.y - b.y};
+template<class T, size_t N>
+T dot(const vec<T,N> &a, const vec<T,N> &b)
+{
+  return dot_1(a,b);
 }
 
-vec2 &operator+=(vec2 &a, const vec2 &b) {
-  a.x += b.x;
-  a.y += b.y;
-  return a;
+template <class T, size_t N>
+vec<T,N> sin(const vec<T,N> &a) {
+  vec<T,N> res;
+  std::ranges::transform(a.GetData(), res.GetData().begin(), [](auto x) { return std::sin(x); });
+  return res;
 }
 
-vec2 operator-(float a, const vec2 &b) {
-  // GLSL behaviour: float is promoted to vec, then subtracted
-  return vec2{a - b.x, a - b.y};
+template <class T, size_t N>
+vec<T,N> cos(const vec<T,N> &a) {
+  vec<T,N> res;
+  std::ranges::transform(a.GetData(), res.GetData().begin(), [](auto x) { return std::cos(x); });
+  return res;
 }
 
-vec2 operator+(const vec2 &a, float b) { return vec2{a.x + b, a.y + b}; }
-
-vec2 operator*(const vec2 &a, const vec2 &b) {
-  return vec2{a.x * b.x, a.y * b.y};
+template <class T, size_t N>
+vec<T,N> exp(const vec<T,N> &a) {
+  vec<T,N> res;
+  std::ranges::transform(a.GetData(), res.GetData().begin(), [](auto x) { return std::exp(x); });
+  return res;
 }
 
-vec4 operator/(vec4 a, float b) {
-  return vec4{a.x / b, a.y / b, a.z / b, a.w / b};
+template <class T, size_t N>
+vec<T,N> tanh(const vec<T,N> &a) {
+  vec<T,N> res;
+  std::ranges::transform(a.GetData(), res.GetData().begin(), [](auto x) { return std::tanh(x); });
+  return res;
 }
 
-vec4 operator-(const vec4 &a, const vec4 &b) {
-  return vec4{a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+template <class T, size_t N>
+vec<T,N> abs(const vec<T,N> &a) {
+  vec<T,N> res;
+  std::ranges::transform(a.GetData(), res.GetData().begin(), [](auto x) { return std::fabs(x); });
+  return res;
 }
 
-vec4 operator+(const vec4 &a, const vec4 &b) {
-  return vec4{a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
+using vec2 = vec<float,2>;
+using vec4 = vec<float,4>;
 
-vec4 operator+(const vec4 &a, float b) {
-  return vec4{a.x + b, a.y + b, a.z + b, a.w + b};
-}
-
-vec4 &operator+=(vec4 &a, const vec4 &b) {
-  a.x += b.x;
-  a.y += b.y;
-  a.z += b.z;
-  a.w += b.w;
-  return a;
-}
-
-vec4 operator*(float a, const vec4 &b) {
-  return vec4{b.x * a, b.y * a, b.z * a, b.w * a};
-}
-
-vec4 operator*(const vec4 &a, float b) { return b * a; }
-
-vec4 operator/(const vec4 &a, const vec4 &b) {
-  return vec4{a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
-}
-
-vec4 normalize(vec4 v) {
-  float l = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
-  return v / l;
-}
-
-float dot(const vec2 &a, const vec2 &b) { return a.x * b.x + a.y * b.y; }
-
-vec4 sin(const vec4 &a) {
-  return vec4{std::sin(a.x), std::sin(a.y), std::sin(a.z), std::sin(a.w)};
-}
-
-vec2 cos(const vec2 &a) { return vec2{std::cos(a.x), std::cos(a.y)}; }
-
-vec4 exp(const vec4 &a) {
-  return vec4{std::exp(a.x), std::exp(a.y), std::exp(a.z), std::exp(a.w)};
-}
-
-vec4 tanh(const vec4 &a) {
-  return vec4{std::tanh(a.x), std::tanh(a.y), std::tanh(a.z), std::tanh(a.w)};
-}
-
-vec2 abs(const vec2 &v) { return vec2{std::fabs(v.x), std::fabs(v.y)}; }
 
 } // namespace utils
 
@@ -206,15 +221,15 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
         //////////////////////////////
         // https://x.com/XorDev/status/1894123951401378051
         vec2 p = (FC * 2. - r) / r.y, l, i,
-             v = p * (l += 4. - 4. * abs(.7 - dot(p, p)));
-        for (; i.y++ < 8.; o += (sin(v.xyyx()) + 1.) * abs(v.x - v.y))
-          v += cos(v.yx() * i.y + i + t) / i.y + .7;
-        o = tanh(5. * exp(l.x - 4. - p.y * vec4(-1, 1, 2, 0)) / o);
+             v = p * (l += 4. - 4. * abs(.7 - dot(p, p))); // TODO tady
+//        for (; i.y++ < 8.; o += (sin(v.xyyx()) + 1.) * abs(v.x - v.y))
+//          v += cos(v.yx() * i.y + i + t) / i.y + .7;
+//        o = tanh(5. * exp(l.x - 4. - p.y * vec4(-1, 1, 2, 0)) / o);
         //////////////////////////////
 
-        image.WritePixel(image::color{static_cast<uint8_t>(o.x * 255.0f),
-                               static_cast<uint8_t>(o.y * 255.0f),
-                               static_cast<uint8_t>(o.z * 255.0f)});
+        image.WritePixel(image::color{static_cast<uint8_t>(o.x() * 255.0f),
+                               static_cast<uint8_t>(o.y() * 255.0f),
+                               static_cast<uint8_t>(o.z() * 255.0f)});
       }
     }
     std::println("Rendered image {}", filename);

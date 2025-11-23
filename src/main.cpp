@@ -64,6 +64,7 @@ public:
   vec(ArgsT... args) : m_Array{args...} {}
 
   vec() : m_Array{} {}
+  vec(T x) { m_Array.fill(x); }
 
   vec operator+(const vec& b) const { return generic_binary_operator<std::plus<>>(b); }
   vec operator-(const vec& b) const { return generic_binary_operator<std::minus<>>(b); }
@@ -75,6 +76,10 @@ public:
   vec operator*(T b) const { return generic_binary_operator<std::multiplies<>>(b); }
   vec operator/(T b) const { return generic_binary_operator<std::divides<>>(b); }
 
+  friend vec operator+(T b, const vec& v) { return v + b; } 
+  friend vec operator-(T b, const vec& v) { return static_cast<T>(-1) * v + b; } 
+  friend vec operator*(T b, const vec& v) { return v * b; } 
+
   vec& operator+=(const vec& b) { return generic_assignment_operator<std::plus<>>(b); }
   vec& operator-=(const vec& b) { return generic_assignment_operator<std::minus<>>(b); }
   vec& operator*=(const vec& b) { return generic_assignment_operator<std::multiplies<>>(b); }
@@ -83,9 +88,21 @@ public:
   const auto& GetData() const { return m_Array; }
   auto& GetData() { return m_Array; }
 
-  auto x() const { return m_Array[0]; }
-  auto y() const { return m_Array[0]; }
-  auto z() const { return m_Array[0]; }
+  auto  x() const { return m_Array[0]; }
+  auto& x()       { return m_Array[0]; };
+  auto  y() const { return m_Array[1]; }
+  auto& y()       { return m_Array[1]; };
+  auto  z() const { return m_Array[2]; }
+  auto& z()       { return m_Array[2]; };
+
+  vec<T,4> xyyx() const
+  {
+    return vec<T,4>{x(), y(), y(), x()};
+  }
+  vec<T,2> yx() const
+  {
+    return vec<T,2>{y(), x()};
+  }
 
 private:
   template<class Op>
@@ -220,11 +237,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
 
         //////////////////////////////
         // https://x.com/XorDev/status/1894123951401378051
-        vec2 p = (FC * 2. - r) / r.y, l, i,
-             v = p * (l += 4. - 4. * abs(.7 - dot(p, p))); // TODO tady
-//        for (; i.y++ < 8.; o += (sin(v.xyyx()) + 1.) * abs(v.x - v.y))
-//          v += cos(v.yx() * i.y + i + t) / i.y + .7;
-//        o = tanh(5. * exp(l.x - 4. - p.y * vec4(-1, 1, 2, 0)) / o);
+        vec2 p = (FC * 2. - r) / r.y(), l, i, 
+             v = p * (l += 4. - 4. * abs(.7 - dot(p, p)));
+        for (; i.y()++ < 8.; o += (sin(v.xyyx()) + 1.) * abs(v.x() - v.y()))
+          v += cos(v.yx() * i.y() + i + t) / i.y() + .7;
+        o = tanh(5. * exp(l.x() - 4. - p.y() * vec4{-1.0f, 1.0f, 2.0f, 0.0f}) / o);
         //////////////////////////////
 
         image.WritePixel(image::color{static_cast<uint8_t>(o.x() * 255.0f),

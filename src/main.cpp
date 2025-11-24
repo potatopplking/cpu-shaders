@@ -22,7 +22,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
 
   using namespace GLSL;
 
-  vec<float,4> test({1.0f,2.0f,3.0f,4.0f});
+  vec<float,4> test(1.0f,2.0f,3.0f,4.0f);
   std::println("{}", test.x());
 
 

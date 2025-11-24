@@ -26,7 +26,7 @@ public:
 
   template <typename... ArgsT>
     requires (std::same_as<ArgsT, T> && ...) && (sizeof...(ArgsT) == N)
-  vec(ArgsT... args) : m_Array{args...} {}
+  explicit vec(ArgsT... args) : m_Array{args...} {}
 
   vec() : m_Array{} {}
   vec(T x) { m_Array.fill(x); }
@@ -50,7 +50,7 @@ public:
   vec& operator*=(const vec& b) { return generic_assignment_operator<std::multiplies<>>(b); }
   vec& operator/=(const vec& b) { return generic_assignment_operator<std::divides<>>(b); }
 
-  const auto& GetData() const { return m_Array; }
+  constexpr auto& GetData() const { return m_Array; }
   auto& GetData() { return m_Array; }
 
   // contrary to GLSL, we allow runtime indices
@@ -201,10 +201,32 @@ using vec2 = vec<float,2>;
 using vec4 = vec<float,4>;
 
 
-template <typename T, std::size_t Rows, std::size_t Cols>
+// mat is column-major.
+// For now we only allow square matrices NxN.
+template <typename T, std::size_t N>
 class mat
 {
+public:
+    mat() : m_Array{} {}
+    mat(T x) { for (auto& column : m_Array) column.fill(x); }
+    
+    template <typename... ScalarArgsT>
+    requires (std::same_as<ScalarArgsT, T> && ...) && (sizeof...(ScalarArgsT) == N*N)
+    explicit mat(ScalarArgsT... args)
+    {
+        std::size_t i = 0;
+        ((m_Array[i / N][i % N] = args, ++i), ...);
+    }
 
+    template<typename... VectorArgsT>
+    requires (std::same_as<VectorArgsT, vec<T,N>> && ...) && (sizeof...(VectorArgsT) == N)
+    explicit mat(VectorArgsT... args)
+    {
+        std::size_t col = 0;
+        ((m_Array[col++] = args.GetData()), ...);
+    }
+private:
+    std::array<std::array<T, N>, N> m_Array;
 };
 
 } // namespace GLSL

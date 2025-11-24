@@ -19,7 +19,7 @@
 
 namespace GLSL {
 
-template <typename T, size_t N>
+template <typename T, std::size_t N>
 class vec {
 
 public:
@@ -53,12 +53,38 @@ public:
   const auto& GetData() const { return m_Array; }
   auto& GetData() { return m_Array; }
 
-  auto  x() const { return m_Array[0]; }
-  auto& x()       { return m_Array[0]; }
-  auto  y() const { return m_Array[1]; }
-  auto& y()       { return m_Array[1]; }
-  auto  z() const { return m_Array[2]; }
-  auto& z()       { return m_Array[2]; }
+  // contrary to GLSL, we allow runtime indices
+  T  operator[](std::size_t index) const { return m_Array[index]; }
+  T& operator[](std::size_t index)       { return m_Array[index]; }
+
+  auto  x() const requires (N > 0) { return m_Array[0]; }
+  auto& x()       requires (N > 0) { return m_Array[0]; }
+  auto  y() const requires (N > 1) { return m_Array[1]; }
+  auto& y()       requires (N > 1) { return m_Array[1]; }
+  auto  z() const requires (N > 2) { return m_Array[2]; }
+  auto& z()       requires (N > 2) { return m_Array[2]; }
+  auto  w() const requires (N > 3) { return m_Array[3]; }
+  auto& w()       requires (N > 3) { return m_Array[3]; }
+
+  auto  r() const { return x(); }
+  auto& r()       { return x(); }
+  auto  g() const { return y(); }
+  auto& g()       { return y(); }
+  auto  b() const { return z(); }
+  auto& b()       { return z(); }
+  auto  a() const { return w(); }
+  auto& a()       { return w(); }
+
+  auto  s() const { return x(); }
+  auto& s() { return x(); }
+  auto  t() const { return y(); }
+  auto& t() { return y(); }
+  auto  p() const { return z(); }
+  auto& p() { return z(); }
+  auto  q() const { return w(); }
+  auto& q() { return w(); }
+
+  /* multi-component swizzles are manually implemented */
 
   vec<T,4> xyyx() const
   {
@@ -96,7 +122,7 @@ private:
   std::array<T,N> m_Array;
 };
 
-template<class T, size_t N>
+template<class T, std::size_t N>
 vec<T,N> normalize(const vec<T,N>& v) {
   const auto& data = v.GetData();
   auto l = std::accumulate(data.begin(), data.end(), 0.0f, [](float acc, float x) { return acc + x*x; } );
@@ -109,7 +135,7 @@ vec<T,N> normalize(const vec<T,N>& v) {
 // for -02 and -O3 the times are identical
 // (clang version 21.1.5)
 
-template<class T, size_t N>
+template<class T, std::size_t N>
 T dot_1(const vec<T,N> &a, const vec<T,N> &b)
 {
   auto z = std::views::zip(a.GetData(), b.GetData());
@@ -117,54 +143,54 @@ T dot_1(const vec<T,N> &a, const vec<T,N> &b)
   return static_cast<T>(res);
 }
 
-template<class T, size_t N>
+template<class T, std::size_t N>
 T dot_2(const vec<T,N> &a, const vec<T,N> &b)
 {
   const T* pA = a.GetData().data();
   const T* pB = b.GetData().data();
   T sum{};
-  for (size_t i = 0; i < N; i++)
+  for (std::size_t i = 0; i < N; i++)
   {
     sum += pA[i] * pB[i];
   }
   return sum;
 }
 
-template<class T, size_t N>
+template<class T, std::size_t N>
 T dot(const vec<T,N> &a, const vec<T,N> &b)
 {
   return dot_1(a,b);
 }
 
-template <class T, size_t N>
+template <class T, std::size_t N>
 vec<T,N> sin(const vec<T,N> &a) {
   vec<T,N> res;
   std::ranges::transform(a.GetData(), res.GetData().begin(), [](auto x) { return std::sin(x); });
   return res;
 }
 
-template <class T, size_t N>
+template <class T, std::size_t N>
 vec<T,N> cos(const vec<T,N> &a) {
   vec<T,N> res;
   std::ranges::transform(a.GetData(), res.GetData().begin(), [](auto x) { return std::cos(x); });
   return res;
 }
 
-template <class T, size_t N>
+template <class T, std::size_t N>
 vec<T,N> exp(const vec<T,N> &a) {
   vec<T,N> res;
   std::ranges::transform(a.GetData(), res.GetData().begin(), [](auto x) { return std::exp(x); });
   return res;
 }
 
-template <class T, size_t N>
+template <class T, std::size_t N>
 vec<T,N> tanh(const vec<T,N> &a) {
   vec<T,N> res;
   std::ranges::transform(a.GetData(), res.GetData().begin(), [](auto x) { return std::tanh(x); });
   return res;
 }
 
-template <class T, size_t N>
+template <class T, std::size_t N>
 vec<T,N> abs(const vec<T,N> &a) {
   vec<T,N> res;
   std::ranges::transform(a.GetData(), res.GetData().begin(), [](auto x) { return std::fabs(x); });
@@ -175,5 +201,11 @@ using vec2 = vec<float,2>;
 using vec4 = vec<float,4>;
 
 
-} // namespace utils
+template <typename T, std::size_t Rows, std::size_t Cols>
+class mat
+{
+
+};
+
+} // namespace GLSL
 

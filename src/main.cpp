@@ -23,6 +23,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
   using namespace GLSL;
 
   vec<float,4> test({1.0f,2.0f,3.0f,4.0f});
+  std::println("{}", test.x());
 
 
   const uint32_t width = 960;
@@ -30,7 +31,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
   const uint32_t animation_steps = 240;
 
   for (uint32_t step = 0; step < animation_steps; step++) {
-    float t = ((float)step / 240) * 2 * std::numbers::pi;
+      float t = static_cast<float>((step / 240.0f) * 2.0f * std::numbers::pi);
     std::string filename = std::format("image-{}.ppm", step);
     auto image = image::PPM{filename, width, height};
     for (uint32_t h = 0; h < height; h++) {

@@ -14,6 +14,7 @@
 #include <ranges>
 #include <cmath>
 #include <chrono>
+#include <numbers>
 
 
 
@@ -224,7 +225,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
   const uint32_t animation_steps = 240;
 
   for (uint32_t step = 0; step < animation_steps; step++) {
-    float t = ((float)step / 240) * 2 * M_PI;
+    float t = ((float)step / 240) * 2 * std::numbers::pi;
     std::string filename = std::format("image-{}.ppm", step);
     auto image = image::PPM{filename, width, height};
     for (uint32_t h = 0; h < height; h++) {

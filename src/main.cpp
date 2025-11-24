@@ -231,23 +231,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char **argv) {
     for (uint32_t h = 0; h < height; h++) {
       for (uint32_t w = 0; w < width; w++) {
 
-        // GLSL prep
-        vec2 FC{static_cast<float>(w), static_cast<float>(h)};
-        const vec2 r{static_cast<float>(width), static_cast<float>(height)};
-        vec4 o;
+        #include <examples/headers/plasma.hpp>
 
-        //////////////////////////////
-        // https://x.com/XorDev/status/1894123951401378051
-        vec2 p = (FC * 2. - r) / r.y(), l, i, 
-             v = p * (l += 4. - 4. * abs(.7 - dot(p, p)));
-        for (; i.y()++ < 8.; o += (sin(v.xyyx()) + 1.) * abs(v.x() - v.y()))
-          v += cos(v.yx() * i.y() + i + t) / i.y() + .7;
-        o = tanh(5. * exp(l.x() - 4. - p.y() * vec4{-1.0f, 1.0f, 2.0f, 0.0f}) / o);
-        //////////////////////////////
-
-        image.WritePixel(image::color{static_cast<uint8_t>(o.x() * 255.0f),
-                               static_cast<uint8_t>(o.y() * 255.0f),
-                               static_cast<uint8_t>(o.z() * 255.0f)});
+        image.WritePixel(image::color{static_cast<uint8_t>(output.x() * 255.0f),
+                               static_cast<uint8_t>(output.y() * 255.0f),
+                               static_cast<uint8_t>(output.z() * 255.0f)});
       }
     }
     std::println("Rendered image {}", filename);

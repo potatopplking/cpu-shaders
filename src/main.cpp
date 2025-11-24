@@ -89,11 +89,11 @@ public:
   auto& GetData() { return m_Array; }
 
   auto  x() const { return m_Array[0]; }
-  auto& x()       { return m_Array[0]; };
+  auto& x()       { return m_Array[0]; }
   auto  y() const { return m_Array[1]; }
-  auto& y()       { return m_Array[1]; };
+  auto& y()       { return m_Array[1]; }
   auto  z() const { return m_Array[2]; }
-  auto& z()       { return m_Array[2]; };
+  auto& z()       { return m_Array[2]; }
 
   vec<T,4> xyyx() const
   {
